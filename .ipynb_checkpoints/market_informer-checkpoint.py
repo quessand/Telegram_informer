@@ -271,17 +271,15 @@ def calculate_report_dates():
 
 def send_reports(dataset):
     try:
-        subscribers = pd.read_csv('D:\Data\Projects\Telegram_informer\subscribers.csv', sep=';')
+        subscribers = pd.read_csv('.\subscribers.csv', sep=';')
     except FileNotFoundError:
         subscribers = pd.DataFrame(columns=['chat_id', 'username', 'first_name', 'last_name'])
-        subscribers.to_csv('D:\Data\Projects\Telegram_informer\subscribers.csv', encoding='utf-8-sig', sep=';', na_rep='NaN', index=False)
+        subscribers.to_csv('.\subscribers.csv', encoding='utf-8-sig', sep=';', na_rep='NaN', index=False)
 
     bot = activate_bot(token_id)
     report_period_start, report_period_end, report_day = calculate_report_dates()
 
-    print('user list:')
     for user in subscribers['chat_id']:
-        print(user)
 
         #Вступительное сообщение рассылки
         intro_message = f'❗️Итоги недели №{ report_period_end.isocalendar()[1] }❗️' +\
