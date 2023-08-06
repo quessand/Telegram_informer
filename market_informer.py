@@ -5,10 +5,11 @@ import requests
 import datetime
 import time
 import warnings
+import io
+import os
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import io
 
 import telegram # python-telegram-bot
 from telegram.ext import CommandHandler, Updater
@@ -19,7 +20,10 @@ warnings.filterwarnings("ignore")
 
 #variables
 end_period = pd.to_datetime( datetime.date.today() )
-start_period = end_period - np.timedelta64(365,'D')
+start_period = end_period - np.timedelta64(370,'D')
+project_dir = os.getcwd().rsplit('\\',1)[0]
+subscribers_file_link = '\\Telegram_informer\\subscribers.csv'
+token_file_link = '\\Telegram_informer\\telegram_token.txt'
 
 tickers_yahoo = {
     'NASDAQ Composite':'%5EIXIC',
@@ -31,7 +35,7 @@ tickers_mfd = [
     140335, # ММВБ Индексы
     174585] # ММВБ Бонды
 
-token_id = open('D:/Data/Projects/Telegram_informer/telegram_token.txt','r').read() #telegram bot id / формат 1234567890:AAGdsdf2XgfgfwzuZg5541m443nVwl551joo
+token_id = open(project_dir + token_file_link,'r').read() #telegram bot id / формат 1234567890:AAGdsdf2XgfgfwzuZg5541m443nVwl551joo
 
 ################################################
 
@@ -128,7 +132,8 @@ def calculate_rolling_mean(dataset):
 
     tickers = list( dataset['ticker'].unique() )
     all_slices = pd.DataFrame()
-    
+    dataset['close'] = dataset['close'].fillna(method='ffill')
+
     for x in tickers:
         sliced_df = dataset[ (dataset['ticker'] == x) ]
         
@@ -212,7 +217,7 @@ def draw_plot(dataset, ticker):
     return plot
 
 def check_for_new_subscribers(update, context):
-    subscribers = pd.read_csv('D:\Data\Projects\Telegram_informer\subscribers.csv', sep=';')
+    subscribers = pd.read_csv(project_dir + subscribers_file_link, sep=';')
 
     chat_id = update.message.chat.id
     username = update.message.chat.username
@@ -226,7 +231,7 @@ def check_for_new_subscribers(update, context):
                                           'first_name':first_name, 
                                           'last_name':last_name}, 
                                           ignore_index=True)
-        subscribers.to_csv('D:\Data\Projects\Telegram_informer\subscribers.csv', encoding='utf-8-sig', sep=';', na_rep='NaN', index=False)
+        subscribers.to_csv(project_dir + subscribers_file_link, encoding='utf-8-sig', sep=';', na_rep='NaN', index=False)
         update.message.reply_text('Подписка подтверждена')
     else:
         pass
@@ -271,10 +276,10 @@ def calculate_report_dates():
 
 def send_reports(dataset):
     try:
-        subscribers = pd.read_csv('D:\Data\Projects\Telegram_informer\subscribers.csv', sep=';')
+        subscribers = pd.read_csv(project_dir + subscribers_file_link, sep=';')
     except FileNotFoundError:
         subscribers = pd.DataFrame(columns=['chat_id', 'username', 'first_name', 'last_name'])
-        subscribers.to_csv('D:\Data\Projects\Telegram_informer\subscribers.csv', encoding='utf-8-sig', sep=';', na_rep='NaN', index=False)
+        subscribers.to_csv(project_dir + subscribers_file_link, encoding='utf-8-sig', sep=';', na_rep='NaN', index=False)
 
     bot = activate_bot(token_id)
     report_period_start, report_period_end, report_day = calculate_report_dates()
@@ -298,13 +303,15 @@ def send_reports(dataset):
             day7_date = dataset[ (dataset['ticker'] == i) & (dataset['date'] <= pd.to_datetime(report_day - datetime.timedelta(days=6))) ]['date'].max()
             day30_date = dataset[ (dataset['ticker'] == i) & (dataset['date'] <= pd.to_datetime(report_day - datetime.timedelta(days=29))) ]['date'].max()
             day90_date = dataset[ (dataset['ticker'] == i) & (dataset['date'] <= pd.to_datetime(report_day - datetime.timedelta(days=89))) ]['date'].max()
-            ytd = dataset[ (dataset['ticker'] == i) & (dataset['date'] >= pd.to_datetime(report_day.replace(day=1,month=1))) ]['date'].min()
+            ytd_date = dataset[ (dataset['ticker'] == i) & (dataset['date'] >= pd.to_datetime(report_day.replace(day=1,month=1))) ]['date'].min()
+            month12_date = dataset[ (dataset['ticker'] == i) & (dataset['date'] <= pd.to_datetime(report_day - datetime.timedelta(days=364))) ]['date'].max()
 
             #Расчет изменений за период
             day7_diff = dataset[ (dataset['ticker'] == i) & (dataset['date'] == base_slice_date) ]['close'].max() / dataset[ (dataset['ticker'] == i) & (dataset['date'] == day7_date) ]['close'].max() - 1
             day30_diff = dataset[ (dataset['ticker'] == i) & (dataset['date'] == base_slice_date) ]['close'].max() / dataset[ (dataset['ticker'] == i) & (dataset['date'] == day30_date) ]['close'].max() - 1
             day90_diff = dataset[ (dataset['ticker'] == i) & (dataset['date'] == base_slice_date) ]['close'].max() / dataset[ (dataset['ticker'] == i) & (dataset['date'] == day90_date) ]['close'].max() - 1
-            ytd = dataset[ (dataset['ticker'] == i) & (dataset['date'] == base_slice_date) ]['close'].max() / dataset[ (dataset['ticker'] == i) & (dataset['date'] == ytd) ]['close'].max() - 1
+            ytd_diff = dataset[ (dataset['ticker'] == i) & (dataset['date'] == base_slice_date) ]['close'].max() / dataset[ (dataset['ticker'] == i) & (dataset['date'] == ytd_date) ]['close'].max() - 1
+            month12_diff = dataset[ (dataset['ticker'] == i) & (dataset['date'] == base_slice_date) ]['close'].max() / dataset[ (dataset['ticker'] == i) & (dataset['date'] == month12_date) ]['close'].max() - 1
 
             #Текст сообщения
             description_message = f'🔴{i} ' +\
@@ -312,7 +319,8 @@ def send_reports(dataset):
                                   f'\n Неделя: { "{:+.1%}".format(day7_diff) }' +\
                                   f'\n 30 дней: { "{:+.1%}".format(day30_diff) }' +\
                                   f'\n 90 дней: { "{:+.1%}".format(day90_diff) }' +\
-                                  f'\n С начала года: { "{:+.1%}".format(ytd) }'
+                                  f'\n С начала года: { "{:+.1%}".format(ytd_diff) }' +\
+                                  f'\n 12 месяцев: { "{:+.1%}".format(month12_diff) }'
 
             #Рассылка сообщений
             bot.send_photo(chat_id=user,
