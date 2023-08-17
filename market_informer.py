@@ -21,9 +21,9 @@ warnings.filterwarnings("ignore")
 #variables
 end_period = pd.to_datetime( datetime.date.today() )
 start_period = end_period - np.timedelta64(370,'D')
-project_dir = os.getcwd().rsplit('\\',1)[0]
-subscribers_file_link = '\\Telegram_informer\\subscribers.csv'
-token_file_link = '\\Telegram_informer\\telegram_token.txt'
+project_dir = 'D:\\Data\\Projects\\Telegram_informer'
+subscribers_file_link = '\\subscribers.csv'
+token_file_link = '\\telegram_token.txt'
 
 tickers_yahoo = {
     'NASDAQ Composite':'%5EIXIC',
