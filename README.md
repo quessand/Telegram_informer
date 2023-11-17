@@ -1,7 +1,7 @@
-# Telegram бот с функцией парсера финансовой информации с регулярным обновлением
+# This script collects financial data from various sourses, converts it to plot and sends via Telegram
  
 ![Screenshot](report_sample.PNG)
 
-Это автоматизированный скрипт, который собирает информацию по выбранным финансовым инструментам с сайтов mfd.ru и Yahoo Finance, преобразует ее в графики и рассылает через Telegram.
+Current data sources: https://finance.yahoo.com, https://mfd.ru
 
-Регулярный автозапуск скрипта можно сделать средствами ОС. На Windows 10 это Планировщик заданий, который запускает bat-файл по выбранному расписанию (код заточен под еженедельную рассылку).
+Script is designed for weekly reports. It is triggered by Windows Scheduler in designated time (you PC should be turned on). In my case it is Saturday 12:00am.

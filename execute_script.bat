@@ -10,7 +10,7 @@ ECHO ============================
 ECHO ============================
 ECHO Python script running
 ECHO ============================
-python "D:\Data\Projects\Telegram_informer\market_informer.py"
+python "D:\Data\Projects\Telegram_informer\main.py"
 
 ECHO ============================
 ECHO End
