@@ -47,10 +47,11 @@ class Scraper:
             table['ticker'] = ticker
 
             df = pd.concat([df, table], ignore_index=True)
-            df = df.drop(columns=['adj close'])
 
             time.sleep(2)
 
+        df = df.drop(columns=['adj close'])
+        df = df[df['close'] != 'null']
         return df
 
     def get_mfd(self):
